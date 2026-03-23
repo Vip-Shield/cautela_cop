@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Câmeras - RUMB</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        :root {
+            --azul-pmerj: #002d5e;
+            --amarelo: #ffc107;
+            --fundo-container: rgba(255, 255, 255, 0.9); /* Ligeira transparência no container */
+            --texto: #333;
+            --sucesso: #28a745;
+            --perigo: #dc3545;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            background-image: url('sop.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            background-color: #000;
+        }
+
+        header { 
+            background: rgba(0, 45, 94, 0.85); /* Topo com transparência */
+            backdrop-filter: blur(5px); /* Efeito de desfoque no topo */
+            -webkit-backdrop-filter: blur(5px);
+            color: white; 
+            width: 100%; 
+            padding: 10px 0; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-logo { height: 60px; width: auto; margin-left: 15px; }
+        header h2 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .tabs { display: flex; gap: 10px; margin: 20px 0; z-index: 100; }
+        .tab-btn { padding: 10px 20px; border: none; background: rgba(221, 221, 221, 0.8); border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+        .tab-btn.active { background: rgba(0, 45, 94, 0.9); color: white; }
+        
+        .container { 
+            background: var(--fundo-container); 
+            backdrop-filter: blur(8px); /* Desfoque atrás do container principal */
+            -webkit-backdrop-filter: blur(8px);
+            width: 90%; 
+            max-width: 600px; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            display: none; 
+            margin-bottom: 30px; 
+        }
+        .container.active { display: block; }
+
+        .search-box { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ccc; border-radius: 5px; box-sizing: border-box; margin-bottom: 20px; background: rgba(255,255,255,0.95); }
+        .result-card { background: var(--azul-pmerj); color: white; padding: 20px; border-radius: 8px; text-align: center; display: none; border-left: 8px solid var(--amarelo); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .result-card h2 { margin: 0 0 10px 0; }
+        .result-card .cam-number { font-size: 32px; font-weight: bold; color: var(--amarelo); }
+        .btn-confirmar-policial { background: var(--sucesso); color: white; border: none; padding: 15px; width: 100%; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 20px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-confirmar-policial:disabled { background: #999; cursor: not-allowed; }
+        .btn-confirmar-policial:hover:not(:disabled) { opacity: 0.9; transform: scale(1.02); }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+        .form-group label { font-weight: bold; color: var(--azul-pmerj); }
+        .form-group input { padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; background: rgba(255,255,255,0.95); }
+        .btn-add { background: var(--sucesso); color: white; border: none; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-add:disabled { background: #999; cursor: not-allowed; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: rgba(249, 249, 249, 0.9); padding: 12px; border-bottom: 1px solid #eee; border-left: 4px solid var(--azul-pmerj); margin-bottom: 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .btn-remove { background: var(--perigo); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        #loadingStatus { text-align: center; color: white; background: rgba(0, 45, 94, 0.8); padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display: none; z-index: 100; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+        
+        .btn-gerar-qr { background: #17a2b8; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #areaQRCode { display: none; text-align: center; margin-top: 20px; background: rgba(249, 249, 249, 0.9); padding: 20px; border-radius: 8px; border: 1px dashed #ccc; }
+        #qrcode canvas, #qrcode img { margin: 0 auto; border: 10px solid white; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="logo_pmerj.png" alt="Logo PMERJ" class="header-logo">
+        <h2>RUMB - Câmeras (Em Nuvem)</h2>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('consulta')">Policial</button>
+        <button class="tab-btn" onclick="switchTab('gerencia')">Administração</button>
+    </div>
+
+    <div id="loadingStatus">🔄 Sincronizando com a Planilha...</div>
+
+    <div id="consulta" class="container active">
+        <h3>Localize sua Câmera</h3>
+        <input type="text" id="searchInput" class="search-box" placeholder="Digite seu nome ou matrícula..." oninput="buscarCamera()">
+        
+        <div id="resultadoBusca" class="result-card">
+            <h2 id="resNome">Sd Silva</h2>
+            <p>Sua Câmera é a de número:</p>
+            <div class="cam-number" id="resCam">CAM-045</div>
+            <p style="margin-top: 10px; font-size: 16px;">Compartimento: <strong id="resPosicao" style="color:var(--amarelo); font-size: 20px;">A-3</strong></p>
+            
+            <button id="btnConfirmar" class="btn-confirmar-policial" onclick="policialConfirmaRetirada()">✔️ CONFIRMAR RETIRADA</button>
+        </div>
+        
+        <p id="msgNaoEncontrado" style="text-align: center; color: var(--perigo); display: none; font-weight: bold; background: rgba(220, 53, 69, 0.1); padding: 10px; border-radius: 5px;">
+            Nenhuma câmera pendente.
+        </p>
+    </div>
+
+    <div id="gerencia" class="container">
+        <h3>Separar Câmera (Atrasos)</h3>
+        <div class="form-group">
+            <label>Policial (Nome ou Matrícula)</label>
+            <input type="text" id="inputNome" placeholder="Ex: Cb Souza / 105248">
+        </div>
+        <div class="form-group">
+            <label>Número/ID da Câmera</label>
+            <input type="text" id="inputCam" placeholder="Ex: 849302">
+        </div>
+        <div class="form-group">
+            <label>Posição no Recipiente</label>
+            <input type="text" id="inputPos" placeholder="Ex: Nicho 05">
+        </div>
+        <button id="btnAdd" class="btn-add" onclick="adicionarCamera()">Registrar Separação</button>
+
+        <h3>Câmeras Aguardando (<span id="totalCameras">0</span>)</h3>
+        <div id="listaCameras"></div>
+
+        <hr style="margin: 30px 0; border: 1px solid #eee;">
+        
+        <h3>🔲 Gerador de QR Code</h3>
+        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Cole o link final do seu aplicativo (Netlify/GitHub) para gerar o código para os policiais.</p>
+        <div class="form-group">
+            <input type="text" id="inputLinkApp" placeholder="Ex: https://cameras-rumb-3upp.netlify.app">
+        </div>
+        <button class="btn-gerar-qr" onclick="gerarQRCode()">Gerar QR Code</button>
+        
+        <div id="areaQRCode">
+            <div id="qrcode"></div>
+            <button class="btn-confirmar-policial" style="margin-top: 20px; font-size: 16px; padding: 10px;" onclick="imprimirQRCode()">🖨️ Imprimir Cartaz</button>
+        </div>
+    </div>
+
+    <script>
+        // ====================================================================
+        // LEMBRETE: COLOQUE O LINK GERADO NO APPS SCRIPT AQUI DENTRO DAS ASPAS:
+        const SCRIPT_URL = "SUA_URL_DO_APP_DA_WEB_AQUI"; 
+        // ====================================================================
+
+        let camerasPendentes = [];
+        let linhaPolicialAtual = -1;
+
+        function showLoading(show) {
+            document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
+        }
+
+        async function carregarDados() {
+            if(SCRIPT_URL === "SUA_URL_DO_APP_DA_WEB_AQUI") return; 
+            showLoading(true);
+            try {
+                const response = await fetch(SCRIPT_URL);
+                camerasPendentes = await response.json();
+                renderizarLista();
+            } catch (error) {
+                console.error("Erro ao carregar dados:", error);
+            }
+            showLoading(false);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.container').forEach(cont => cont.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            if(tabId === 'gerencia' || tabId === 'consulta') {
+                carregarDados(); 
+            }
+        }
+
+        async function adicionarCamera() {
+            const nome = document.getElementById('inputNome').value.trim().toUpperCase();
+            const cam = document.getElementById('inputCam').value.trim();
+            const pos = document.getElementById('inputPos').value.trim() || 'N/A';
+
+            if (!nome || !cam) return alert("Preencha o nome e a câmera!");
+
+            const dataHora = new Date().toLocaleString('pt-BR');
+            const btn = document.getElementById('btnAdd');
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'add', nome, cam, pos, dataHora })
+                });
+                
+                document.getElementById('inputNome').value = '';
+                document.getElementById('inputCam').value = '';
+                document.getElementById('inputPos').value = '';
+                await carregarDados(); 
+
+            } catch (error) {
+                alert("Erro ao salvar na nuvem.");
+            }
+            btn.disabled = false;
+            btn.innerText = "Registrar Separação";
+        }
+
+        async function removerCamera(linhaSheet) {
+            if(confirm("Confirmar a baixa desta câmera?")) {
+                showLoading(true);
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'remove', row: linhaSheet })
+                    });
+                    await carregarDados();
+                } catch (error) {
+                    alert("Erro ao dar baixa.");
+                }
+            }
+        }
+
+        function buscarCamera() {
+            const termo = document.getElementById('searchInput').value.trim().toUpperCase();
+            const card = document.getElementById('resultadoBusca');
+            const msgErro = document.getElementById('msgNaoEncontrado');
+            
+            if (termo === '') {
+                card.style.display = 'none';
+                msgErro.style.display = 'none';
+                linhaPolicialAtual = -1;
+                return;
+            }
+
+            const policialEncontrado = camerasPendentes.find(c => c.nome.includes(termo));
+
+            if (policialEncontrado) {
+                linhaPolicialAtual = policialEncontrado.row; 
+                document.getElementById('resNome').innerText = policialEncontrado.nome;
+                document.getElementById('resCam').innerText = policialEncontrado.cam;
+                document.getElementById('resPosicao').innerText = policialEncontrado.pos;
+                card.style.display = 'block';
+                msgErro.style.display = 'none';
+            } else {
+                card.style.display = 'none';
+                msgErro.style.display = 'block';
+            }
+        }
+
+        async function policialConfirmaRetirada() {
+            if (linhaPolicialAtual !== -1) {
+                const btn = document.getElementById('btnConfirmar');
+                btn.disabled = true;
+                btn.innerText = "Registrando Baixa...";
+
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'remove', row: linhaPolicialAtual })
+                    });
+                    
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('resultadoBusca').style.display = 'none';
+                    linhaPolicialAtual = -1;
+                    alert("Retirada confirmada na base de dados! Bom serviço.");
+                    await carregarDados();
+                } catch(e) {
+                    alert("Erro ao comunicar com o servidor.");
+                }
+                btn.disabled = false;
+                btn.innerText = "✔️ CONFIRMAR RETIRADA";
+            }
+        }
+
+        function renderizarLista() {
+            const lista = document.getElementById('listaCameras');
+            lista.innerHTML = '';
+            
+            camerasPendentes.forEach((item) => {
+                lista.innerHTML += `
+                    <div class="list-item">
+                        <div>
+                            <strong>${item.nome}</strong><br>
+                            <small>Câmera: ${item.cam} | Pos: ${item.pos}</small>
+                        </div>
+                        <button class="btn-remove" onclick="removerCamera(${item.row})">Baixa</button>
+                    </div>
+                `;
+            });
+            document.getElementById('totalCameras').innerText = camerasPendentes.length;
+        }
+
+        function gerarQRCode() {
+            const link = document.getElementById('inputLinkApp').value.trim();
+            if (!link) {
+                alert("Por favor, cole o link do aplicativo Netlify/GitHub primeiro.");
+                return;
+            }
+            
+            document.getElementById('qrcode').innerHTML = "";
+            
+            new QRCode(document.getElementById("qrcode"), {
+                text: link,
+                width: 220,
+                height: 220,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            
+            document.getElementById('areaQRCode').style.display = "block";
+        }
+
+        function imprimirQRCode() {
+            const qrImgElement = document.querySelector('#qrcode img');
+            if(!qrImgElement) return alert("Gere o QR Code primeiro.");
+            const qrConteudo = qrImgElement.src;
+            
+            const link = document.getElementById('inputLinkApp').value.trim();
+            
+            const janela = window.open('', '', 'height=600,width=800');
+            janela.document.write(`
+                <html>
+                <head>
+                    <title>Cartaz QR Code - RUMB</title>
+                    <style>
+                        body { text-align: center; font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }
+                        .caixa { border: 4px solid #002d5e; border-radius: 15px; padding: 30px; max-width: 500px; margin: 0 auto; }
+                        h1 { color: #002d5e; margin-bottom: 5px; font-size: 32px; text-transform: uppercase; }
+                        h2 { color: #d9534f; margin-top: 0; font-size: 24px; }
+                        p { font-size: 18px; font-weight: bold; margin-bottom: 30px; }
+                        .qr-container { display: inline-block; padding: 10px; border: 2px dashed #999; margin-bottom: 20px; }
+                        .qr-container img { width: 220px; height: 220px; }
+                        .link-texto { font-size: 14px; color: #666; word-break: break-all; }
+                    </style>
+                </head>
+                <body>
+                    <div class="caixa">
+                        <h1>RUMB - 3ª UPP</h1>
+                        <h2>AUTOATENDIMENTO DE CÂMERAS</h2>
+                        <p>Chegou atrasado?<br>Aponte a câmera do seu celular para consultar sua posição e dar baixa.</p>
+                        <div class="qr-container">
+                            <img src="${qrConteudo}" alt="QR Code">
+                        </div>
+                        <div class="link-texto">Ou acesse: ${link}</div>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); window.close(); }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            janela.document.close();
+        }
+
+        if(SCRIPT_URL !== "SUA_URL_DO_APP_DA_WEB_AQUI") {
+            carregarDados();
+        }
+    </script>
+</body>
+</html>
