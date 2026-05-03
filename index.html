@@ -10,7 +10,7 @@
         :root {
             --azul-pmerj: #002d5e;
             --amarelo: #ffc107;
-            --fundo-container: rgba(255, 255, 255, 0.9); /* Ligeira transparência no container */
+            --fundo-container: rgba(255, 255, 255, 0.9);
             --texto: #333;
             --sucesso: #28a745;
             --perigo: #dc3545;
@@ -32,8 +32,8 @@
         }
 
         header { 
-            background: rgba(0, 45, 94, 0.85); /* Topo com transparência */
-            backdrop-filter: blur(5px); /* Efeito de desfoque no topo */
+            background: rgba(0, 45, 94, 0.85);
+            backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             color: white; 
             width: 100%; 
@@ -57,7 +57,7 @@
         
         .container { 
             background: var(--fundo-container); 
-            backdrop-filter: blur(8px); /* Desfoque atrás do container principal */
+            backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             width: 90%; 
             max-width: 600px; 
@@ -132,7 +132,8 @@
         </div>
         <div class="form-group">
             <label>Número/ID da Câmera</label>
-            <input type="text" id="inputCam" placeholder="Ex: 849302">
+            <input type="text" id="inputCam" list="sugestoesCameras" placeholder="Ex: 01 ou J30912170">
+            <datalist id="sugestoesCameras"></datalist>
         </div>
         <div class="form-group">
             <label>Posição no Recipiente</label>
@@ -166,6 +167,45 @@
 
         let camerasPendentes = [];
         let linhaPolicialAtual = -1;
+
+        // --- NOVO CÓDIGO DO AUTOCOMPLETE ---
+        const listaDeCameras = [
+            { serial: "J30912170", num: "01" }, { serial: "J32612213", num: "02" }, { serial: "GL7563713", num: "03" }, { serial: "J29664976", num: "04" },
+            { serial: "J32841557", num: "05" }, { serial: "J32970470", num: "06" }, { serial: "J12957404", num: "07" }, { serial: "J32841883", num: "08" },
+            { serial: "J32970469", num: "09" }, { serial: "J33583656", num: "10" }, { serial: "J32841818", num: "11" }, { serial: "J29498922", num: "12" },
+            { serial: "J32841835", num: "13" }, { serial: "J32841897", num: "14" }, { serial: "J32343839", num: "15" }, { serial: "J32841896", num: "16" },
+            { serial: "J32841805", num: "17" }, { serial: "J32841970", num: "18" }, { serial: "J32970743", num: "19" }, { serial: "J30914478", num: "20" },
+            { serial: "J32343825", num: "21" }, { serial: "J32343563", num: "22" }, { serial: "J32970632", num: "23" }, { serial: "J32343829", num: "24" },
+            { serial: "J32343802", num: "25" }, { serial: "J32343884", num: "26" }, { serial: "J32841891", num: "27" }, { serial: "J32840732", num: "28" },
+            { serial: "J32343562", num: "29" }, { serial: "J32841836", num: "30" }, { serial: "J32343661", num: "31" }, { serial: "J30912754", num: "32" },
+            { serial: "J32343525", num: "33" }, { serial: "J27896557", num: "34" }, { serial: "J16658824", num: "35" }, { serial: "J32612224", num: "36" },
+            { serial: "J16658680", num: "37" }, { serial: "J24884140", num: "38" }, { serial: "J32970487", num: "39" }, { serial: "J31490071", num: "40" },
+            { serial: "J26650212", num: "41" }, { serial: "J30912782", num: "42" }, { serial: "J32343801", num: "43" }, { serial: "J15597153", num: "44" },
+            { serial: "J32343817", num: "45" }, { serial: "J30313360", num: "46" }, { serial: "J30313246", num: "47" }, { serial: "J32841854", num: "48" },
+            { serial: "J30912767", num: "49" }, { serial: "J30313780", num: "50" }, { serial: "J32343611", num: "51" }, { serial: "J31490047", num: "52" },
+            { serial: "J14263648", num: "53" }, { serial: "J32343797", num: "54" }, { serial: "J32970464", num: "55" }, { serial: "J32841809", num: "56" },
+            { serial: "J32343881", num: "57" }, { serial: "J32841804", num: "58" }, { serial: "J32343524", num: "59" }, { serial: "J31489939", num: "60" },
+            { serial: "J32841767", num: "61" }, { serial: "J32841816", num: "62" }, { serial: "J32841887", num: "63" }, { serial: "J30313272", num: "64" },
+            { serial: "J32841817", num: "65" }, { serial: "J31490051", num: "66" }, { serial: "J32841858", num: "67" }, { serial: "J32841901", num: "68" },
+            { serial: "J30913442", num: "69" }, { serial: "J32969661", num: "70" }, { serial: "J32343874", num: "71" }, { serial: "J30913642", num: "72" },
+            { serial: "J32970624", num: "73" }, { serial: "AD1817400", num: "74" }, { serial: "J32841839", num: "75" }, { serial: "J32841771", num: "76" },
+            { serial: "J32343609", num: "77" }, { serial: "J32970471", num: "78" }, { serial: "J32343819", num: "79" }, { serial: "J31490241", num: "80" },
+            { serial: "J31490221", num: "81" }, { serial: "J32841762", num: "82" }, { serial: "J32969887", num: "83" }, { serial: "J32841810", num: "84" },
+            { serial: "J32343568", num: "85" }, { serial: "J31490054", num: "86" }, { serial: "J31489954", num: "87" }, { serial: "J32841827", num: "88" },
+            { serial: "J30913648", num: "89" }, { serial: "J32343573", num: "90" }, { serial: "J31490044", num: "91" }, { serial: "J32841857", num: "92" }
+        ];
+
+        function popularDatalistCameras() {
+            const datalist = document.getElementById('sugestoesCameras');
+            listaDeCameras.forEach(cam => {
+                const option = document.createElement('option');
+                option.value = `${cam.num} - ${cam.serial}`;
+                datalist.appendChild(option);
+            });
+        }
+        
+        window.addEventListener('DOMContentLoaded', popularDatalistCameras);
+        // --- FIM DO NOVO CÓDIGO ---
 
         function showLoading(show) {
             document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
