@@ -128,7 +128,8 @@
         <h3>Separar Câmera (Atrasos)</h3>
         <div class="form-group">
             <label>Policial (Nome ou Matrícula)</label>
-            <input type="text" id="inputNome" placeholder="Ex: Cb Souza / 105248">
+            <input type="text" id="inputNome" list="sugestoesPoliciais" placeholder="Ex: Cb Souza / 105248">
+            <datalist id="sugestoesPoliciais"></datalist>
         </div>
         <div class="form-group">
             <label>Número/ID da Câmera</label>
@@ -168,7 +169,6 @@
         let camerasPendentes = [];
         let linhaPolicialAtual = -1;
 
-        // --- NOVO CÓDIGO DO AUTOCOMPLETE ---
         const listaDeCameras = [
             { serial: "J30912170", num: "01" }, { serial: "J32612213", num: "02" }, { serial: "GL7563713", num: "03" }, { serial: "J29664976", num: "04" },
             { serial: "J32841557", num: "05" }, { serial: "J32970470", num: "06" }, { serial: "J12957404", num: "07" }, { serial: "J32841883", num: "08" },
@@ -195,6 +195,31 @@
             { serial: "J30913648", num: "89" }, { serial: "J32343573", num: "90" }, { serial: "J31490044", num: "91" }, { serial: "J32841857", num: "92" }
         ];
 
+        // --- NOVA LISTA DE POLICIAIS ---
+        const listaDePoliciais = [
+            "2º SGT PM 85426 BRITO", "2º SGT PM 85664 DENILSON", "2º SGT PM 86367 REGALDINO",
+            "3º SGT PM 91071 DIAS", "3º SGT PM 91665 R. ALCANTARA", "3º SGT PM 91783 CHARLES",
+            "3º SGT PM 92258 DOMINGOS", "3º SGT PM 92490 VALIM", "3º SGT PM 92732 MARCIO ESTEVÃO",
+            "3º SGT PM 93168 F.", "3º SGT PM 93341 L. FRANCISCO", "3º SGT PM 93752 CARDOSO",
+            "3º SGT PM 93998 F. PERES", "3º SGT PM 95629 FULLY", "3º SGT PM 96003 JONATHA",
+            "3º SGT PM 96287 RODRIGUES", "3º SGT PM 96990 CLEISON", "3º SGT PM 98121 JOHNATHAN",
+            "3º SGT PM 98202 CRISTIANO", "3º SGT PM 98339 SOUZA", "3º SGT PM 98596 VIDAL",
+            "3º SGT PM 99164 R. MACHADO", "3º SGT PM 99488 DE PAULA", "3º SGT PM 100032 R. LACERDA",
+            "3º SGT PM 100360 ULISSES", "CB PM 101823 S. LEMOS", "CB PM 102181 JUNIOR",
+            "CB PM 102190 D. SILVA", "CB PM 102704 J. ANDRÉ", "CB PM 103051 TIRADENTES",
+            "CB PM 103727 BIZONI", "CB PM 104282 SILVA", "CB PM 104291 FELIX",
+            "CB PM 104953 PINHEIRO", "CB PM 105248 DE SOUZA", "CB PM 105249 R. FILHO",
+            "CB PM 105374 LAIA", "CB PM 105375 RANGEL", "CB PM 105377 F. RIBEIRO",
+            "CB PM 105391 HENRIQUE", "CB PM 106037 CAIQUE", "CB PM 106260 BAPTISTA",
+            "CB PM 106348 SOARES", "CB PM 106351 M. ARAUJO", "CB PM 106467 L. SILVA",
+            "CB PM 106533 CORTEZ", "CB PM 106561 MARCOS", "CB PM 106650 MATHEUS",
+            "CB PM 107520 T. RODRIGUES", "CB PM 107561 COUTINHO", "CB PM 107805 M. PAULO",
+            "CB PM 108190 UERBERT", "CB PM 108677 ÉDVAN", "CB PM 108786 TORRES",
+            "CB PM 108824 CARMO", "CB PM 109067 CAMILO", "CB PM 109109 RODRIGUES",
+            "SD PM 108664 SOUSA SILVA", "SD PM 109738 MARIANO", "SD PM 110297 L. BARBOSA",
+            "SD PM 110470 TELES"
+        ];
+
         function popularDatalistCameras() {
             const datalist = document.getElementById('sugestoesCameras');
             listaDeCameras.forEach(cam => {
@@ -203,9 +228,21 @@
                 datalist.appendChild(option);
             });
         }
+
+        // --- NOVA FUNÇÃO DE PREENCHIMENTO DOS POLICIAIS ---
+        function popularDatalistPoliciais() {
+            const datalist = document.getElementById('sugestoesPoliciais');
+            listaDePoliciais.forEach(policial => {
+                const option = document.createElement('option');
+                option.value = policial;
+                datalist.appendChild(option);
+            });
+        }
         
-        window.addEventListener('DOMContentLoaded', popularDatalistCameras);
-        // --- FIM DO NOVO CÓDIGO ---
+        window.addEventListener('DOMContentLoaded', () => {
+            popularDatalistCameras();
+            popularDatalistPoliciais(); // Chama a função ao carregar a página
+        });
 
         function showLoading(show) {
             document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
