@@ -85,6 +85,10 @@
         .list-item { display: flex; justify-content: space-between; align-items: center; background: rgba(249, 249, 249, 0.9); padding: 12px; border-bottom: 1px solid #eee; border-left: 4px solid var(--azul-pmerj); margin-bottom: 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .btn-remove { background: var(--perigo); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
+        .btn-limpeza { background: #6c757d; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-limpeza:hover { background: #5a6268; }
+        .btn-limpeza:disabled { background: #999; cursor: not-allowed; }
+
         #loadingStatus { text-align: center; color: white; background: rgba(0, 45, 94, 0.8); padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display: none; z-index: 100; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
         
         .btn-gerar-qr { background: #17a2b8; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -143,6 +147,9 @@
         <button id="btnAdd" class="btn-add" onclick="adicionarCamera()">Registrar Separação</button>
 
         <h3>Câmeras Aguardando (<span id="totalCameras">0</span>)</h3>
+        
+        <button class="btn-limpeza" onclick="limparCamerasAnteriores(true)">🧹 Dar Baixa em Câmeras de Dias Anteriores</button>
+        
         <div id="listaCameras"></div>
 
         <hr style="margin: 30px 0; border: 1px solid #eee;">
@@ -162,7 +169,11 @@
 
     <script>
         // ====================================================================
-        // LEMBRETE: COLOQUE O LINK GERADO NO APPS SCRIPT AQUI DENTRO DAS ASPAS:
+        // LEMBRETE: COLOQUE A SENHA DA ADMINISTRAÇÃO E O LINK DO APP SCRIPT
+        // ====================================================================
+        const SENHA_ADMIN = "rumb123"; // <-- COLOQUE SUA SENHA AQUI
+        let adminLogado = sessionStorage.getItem('adminLogado') === 'true';
+
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwToaCVpMVmHQW-2sRsOYc6WNFOBqbA8P2CbXlFqW9erGzs61Qi7fKKnnBow2j5DAwL/exec"; 
         // ====================================================================
 
@@ -195,7 +206,6 @@
             { serial: "J30913648", num: "89" }, { serial: "J32343573", num: "90" }, { serial: "J31490044", num: "91" }, { serial: "J32841857", num: "92" }
         ];
 
-        // --- NOVA LISTA DE POLICIAIS ---
         const listaDePoliciais = [
             "2º SGT PM 85426 BRITO", "2º SGT PM 85664 DENILSON", "2º SGT PM 86367 REGALDINO",
             "3º SGT PM 91071 DIAS", "3º SGT PM 91665 R. ALCANTARA", "3º SGT PM 91783 CHARLES",
@@ -217,7 +227,7 @@
             "CB PM 108190 UERBERT", "CB PM 108677 ÉDVAN", "CB PM 108786 TORRES",
             "CB PM 108824 CARMO", "CB PM 109067 CAMILO", "CB PM 109109 RODRIGUES",
             "SD PM 108664 SOUSA SILVA", "SD PM 109738 MARIANO", "SD PM 110297 L. BARBOSA",
-            "SD PM 110470 TELES", "3º SGT PM 100228 MIRANDA", "3º SGT PM 99791 ALMEIDA", "CB PM 108292 JULIANO", "3º SGT PM 93331 FERREIRA", "SD PM 109754 CAMELO", "CB PM 109414 BIANCH", "SD PM 110433 SANTOS", "SUBTEN PM 68831 GOMES", "SUBTEN PM 76452 WAGNER", "SUBTEN PM 70372 MENDES", "3º SGT PM 101823 S. LEMOS", "3º SGT PM 102712 JOAQUIM", "3º SGT PM 99242 ADRIEL", "3º SGT PM 98408 NASCIMENTO", "CB PM 109510 MAGANO", "CB PM 107541 DENIS", "CB PM 97129 FREITAS"
+            "SD PM 110470 TELES", "3º SGT PM 100228 MIRANDA", "3º SGT PM 99791 ALMEIDA", "CB PM 108292 JULIANO", "3º SGT PM 93331 FERREIRA", "SD PM 109754 CAMELO", "CB PM 109414 BIANCH", "SD PM 110433 SANTOS", "SUBTEN PM 68831 GOMES", "SUBTEN PM 76452 WAGNER", "SUBTEN PM 70372 MENDES", "3º SGT PM 101823 S. LEMOS", "3º SGT PM 102712 JOAQUIM", "3º SGT PM 99242 ADRIEL", "3º SGT PM 98408 NASCIMENTO", "CB PM 109510 MAGANO", "CB PM 107541 DENIS", "CB PM 97129 FREITAS", "3º SGT PM 93408 SANTOS"
         ];
 
         function popularDatalistCameras() {
@@ -229,7 +239,6 @@
             });
         }
 
-        // --- NOVA FUNÇÃO DE PREENCHIMENTO DOS POLICIAIS ---
         function popularDatalistPoliciais() {
             const datalist = document.getElementById('sugestoesPoliciais');
             listaDePoliciais.forEach(policial => {
@@ -241,19 +250,33 @@
         
         window.addEventListener('DOMContentLoaded', () => {
             popularDatalistCameras();
-            popularDatalistPoliciais(); // Chama a função ao carregar a página
+            popularDatalistPoliciais(); 
+            programarViradaDoDia(); // Inicia o relógio silencioso da meia-noite
         });
 
         function showLoading(show) {
             document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
         }
 
-        async function carregarDados() {
+        // ==========================================
+        // LÓGICA DE CARREGAMENTO E LIMPEZA
+        // ==========================================
+
+        async function carregarDados(verificarLimpeza = true) {
             if(SCRIPT_URL === "SUA_URL_DO_APP_DA_WEB_AQUI") return; 
             showLoading(true);
             try {
                 const response = await fetch(SCRIPT_URL);
                 camerasPendentes = await response.json();
+                
+                if (verificarLimpeza) {
+                    const fezLimpeza = await limparCamerasAnteriores(false);
+                    if (fezLimpeza) {
+                        const responseAtualizada = await fetch(SCRIPT_URL);
+                        camerasPendentes = await responseAtualizada.json();
+                    }
+                }
+                
                 renderizarLista();
             } catch (error) {
                 console.error("Erro ao carregar dados:", error);
@@ -261,10 +284,116 @@
             showLoading(false);
         }
 
+        // Função unificada de limpeza (Correção Definitiva de Datas)
+        async function limparCamerasAnteriores(manual = false) {
+            let antigas = camerasPendentes.filter(cam => {
+                if (!cam.dataHora) return false;
+                
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0); 
+                
+                let dataRegistroObj;
+                
+                // Trata datas vindas como padrão ISO ou texto brasileiro
+                if (cam.dataHora.includes('T')) {
+                    dataRegistroObj = new Date(cam.dataHora);
+                } else {
+                    let dataString = cam.dataHora.split(',')[0].split(' ')[0].trim();
+                    let partes = dataString.split('/');
+                    if (partes.length === 3) {
+                        dataRegistroObj = new Date(partes[2], partes[1] - 1, partes[0]);
+                    } else {
+                        return false; 
+                    }
+                }
+                
+                dataRegistroObj.setHours(0, 0, 0, 0); 
+                return dataRegistroObj.getTime() < hoje.getTime();
+            });
+
+            if (antigas.length === 0) {
+                if (manual) alert("Nenhuma câmera de dias anteriores pendente.");
+                return false; 
+            }
+
+            if (!manual || confirm(`Encontradas ${antigas.length} câmera(s) de dias anteriores. Antecipar a baixa de todas?`)) {
+                
+                const btn = document.querySelector('.btn-limpeza');
+                if (manual && btn) {
+                    btn.disabled = true;
+                    btn.innerText = "Limpando...";
+                    showLoading(true);
+                }
+
+                for (let cam of antigas) {
+                    try {
+                        await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({ action: 'remove', row: cam.row })
+                        });
+                    } catch (e) {
+                        console.error("Erro na baixa da câmera linha " + cam.row);
+                    }
+                }
+                
+                if (manual) {
+                    alert("Baixa antecipada concluída com sucesso!");
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "🧹 Dar Baixa em Câmeras de Dias Anteriores";
+                    }
+                    await carregarDados(false); 
+                }
+                return true; 
+            }
+            return false;
+        }
+
+        function programarViradaDoDia() {
+            const agora = new Date();
+            const meiaNoite = new Date(agora);
+            meiaNoite.setHours(24, 0, 0, 0); 
+            
+            const tempoRestante = meiaNoite.getTime() - agora.getTime();
+            
+            setTimeout(() => {
+                if (document.getElementById('gerencia').classList.contains('active') || 
+                    document.getElementById('consulta').classList.contains('active')) {
+                    carregarDados(true); 
+                }
+                programarViradaDoDia(); 
+            }, tempoRestante);
+        }
+
+        // ==========================================
+        // CONTROLE DE ACESSO (SENHA) E ABAS
+        // ==========================================
         function switchTab(tabId) {
+            if (tabId === 'gerencia' && !adminLogado) {
+                const senhaDigitada = prompt("🔒 Acesso Restrito ao RUMB. Digite a senha:");
+                
+                if (senhaDigitada === SENHA_ADMIN) {
+                    adminLogado = true;
+                    sessionStorage.setItem('adminLogado', 'true'); 
+                } else {
+                    if (senhaDigitada !== null) { 
+                        alert("❌ Senha incorreta!");
+                    }
+                    return; 
+                }
+            }
+
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.container').forEach(cont => cont.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            const botoes = document.querySelectorAll('.tab-btn');
+            botoes.forEach(b => {
+                if(b.innerText.toLowerCase().includes(tabId === 'gerencia' ? 'admin' : 'policial')) {
+                    b.classList.add('active');
+                }
+            });
+            
             document.getElementById(tabId).classList.add('active');
             
             if(tabId === 'gerencia' || tabId === 'consulta') {
@@ -312,7 +441,7 @@
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams({ action: 'remove', row: linhaSheet })
                     });
-                    await carregarDados();
+                    await carregarDados(false);
                 } catch (error) {
                     alert("Erro ao dar baixa.");
                 }
@@ -363,7 +492,7 @@
                     document.getElementById('resultadoBusca').style.display = 'none';
                     linhaPolicialAtual = -1;
                     alert("Retirada confirmada na base de dados! Bom serviço.");
-                    await carregarDados();
+                    await carregarDados(false);
                 } catch(e) {
                     alert("Erro ao comunicar com o servidor.");
                 }
@@ -415,7 +544,6 @@
             const qrImgElement = document.querySelector('#qrcode img');
             if(!qrImgElement) return alert("Gere o QR Code primeiro.");
             const qrConteudo = qrImgElement.src;
-            
             const link = document.getElementById('inputLinkApp').value.trim();
             
             const janela = window.open('', '', 'height=600,width=800');
