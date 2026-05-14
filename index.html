@@ -112,7 +112,7 @@
 
     <div id="consulta" class="container active">
         <h3>Localize sua Câmera</h3>
-        <input type="text" id="searchInput" class="search-box" placeholder="Digite seu nome..." oninput="buscarCamera()">
+        <input type="text" id="searchInput" class="search-box" placeholder="Digite seu nome ou RG..." oninput="buscarCamera()">
         
         <div id="resultadoBusca" class="result-card">
             <h2 id="resNome">Sd Silva</h2>
@@ -148,7 +148,7 @@
 
         <h3>Câmeras Aguardando (<span id="totalCameras">0</span>)</h3>
         
-        <button class="btn-limpeza" onclick="limparCamerasAnteriores(true)">🧹 Dar Baixa em Câmeras de Dias Anteriores</button>
+        <button class="btn-limpeza" onclick="limparCamerasAnteriores(true)">🧹 Dar Baixa em Câmeras (+ de 48h)</button>
         
         <div id="listaCameras"></div>
 
@@ -284,13 +284,15 @@
             showLoading(false);
         }
 
-        // Função unificada de limpeza (Correção Definitiva de Datas)
+        // Função unificada de limpeza (Configurada para tolerância de 48 horas)
         async function limparCamerasAnteriores(manual = false) {
             let antigas = camerasPendentes.filter(cam => {
                 if (!cam.dataHora) return false;
                 
-                const hoje = new Date();
-                hoje.setHours(0, 0, 0, 0); 
+                // Define o limite para 48h (mantém registros de hoje e de ontem)
+                const dataLimite = new Date();
+                dataLimite.setDate(dataLimite.getDate() - 1); // Recua para ontem
+                dataLimite.setHours(0, 0, 0, 0); 
                 
                 let dataRegistroObj;
                 
@@ -308,15 +310,16 @@
                 }
                 
                 dataRegistroObj.setHours(0, 0, 0, 0); 
-                return dataRegistroObj.getTime() < hoje.getTime();
+                // Exclui apenas se for menor que a dataLimite (antes de ontem)
+                return dataRegistroObj.getTime() < dataLimite.getTime();
             });
 
             if (antigas.length === 0) {
-                if (manual) alert("Nenhuma câmera de dias anteriores pendente.");
+                if (manual) alert("Nenhuma câmera com mais de 48 horas pendente.");
                 return false; 
             }
 
-            if (!manual || confirm(`Encontradas ${antigas.length} câmera(s) de dias anteriores. Antecipar a baixa de todas?`)) {
+            if (!manual || confirm(`Encontradas ${antigas.length} câmera(s) com mais de 48 horas. Confirmar a baixa de todas?`)) {
                 
                 const btn = document.querySelector('.btn-limpeza');
                 if (manual && btn) {
@@ -338,10 +341,10 @@
                 }
                 
                 if (manual) {
-                    alert("Baixa antecipada concluída com sucesso!");
+                    alert("Baixa concluída com sucesso!");
                     if (btn) {
                         btn.disabled = false;
-                        btn.innerText = "🧹 Dar Baixa em Câmeras de Dias Anteriores";
+                        btn.innerText = "🧹 Dar Baixa em Câmeras (+ de 48h)";
                     }
                     await carregarDados(false); 
                 }
